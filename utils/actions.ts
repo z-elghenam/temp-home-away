@@ -1,20 +1,31 @@
 "use server";
-import { profileSchema } from "./schemas";
+import { imageSchema, profileSchema, validateWithZodSchema } from "./schemas";
 import { ZodError } from "zod";
 import db from "./db";
 import { clerkClient, currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
+import { uploadImage } from "./supabase";
 
 const getAuthUser = async () => {
   const user = await currentUser();
 
   if (!user) throw new Error("You must be logged in to access this route");
 
-  if (!user.privateMetadata.hasProfile) {
-    redirect("/profile/create");
-  }
+  if (!user.privateMetadata.hasProfile) redirect("/profile/create");
 
   return user;
+};
+
+const renderError = (
+  error: unknown,
+): {
+  message: string;
+} => {
+  return {
+    message:
+      error instanceof Error ? error.message : "An unexpected error occurred",
+  };
 };
 
 export const createProfileAction = async (
@@ -26,7 +37,7 @@ export const createProfileAction = async (
     if (!user) throw new Error("Please login to create a profile");
 
     const rawData = Object.fromEntries(formData.entries());
-    const validatedFields = profileSchema.parse(rawData);
+    const validatedFields = validateWithZodSchema(profileSchema, rawData);
 
     await db.profile.create({
       data: {
@@ -46,7 +57,7 @@ export const createProfileAction = async (
     });
   } catch (err) {
     if (err instanceof ZodError) {
-      return { message: err.errors.map((e) => e.message).join(", ") }; // Return Zod error messages
+      return { message: err.errors.map((e) => e.message).join(", ") };
     }
 
     return {
@@ -59,9 +70,7 @@ export const createProfileAction = async (
 };
 
 export const fetchProfileImage = async () => {
-  const user = await currentUser();
-
-  if (!user) return null;
+  const user = await getAuthUser();
 
   const profile = await db.profile.findUnique({
     where: {
@@ -84,8 +93,6 @@ export const fetchProfile = async () => {
     },
   });
 
-   // if (!profile) return redirect('/profile/create');
-
   return profile;
 };
 
@@ -93,8 +100,57 @@ export const updateProfileAction = async (
   prevState: { message: string },
   formData: FormData,
 ): Promise<{ message: string }> => {
+  const user = await getAuthUser();
+  try {
+    const rawData = Object.fromEntries(formData.entries());
+    const validatedFields = validateWithZodSchema(profileSchema, rawData);
 
-  const rawData = Object.fromEntries(formData.entries());
+    await db.profile.update({
+      where: {
+        clerkId: user.id,
+      },
+      data: validatedFields,
+    });
 
-  return { message: "update profile action" };
+    revalidatePath("/profile");
+    return { message: "Profile updated successfully" };
+  } catch (error) {
+    return renderError(error);
+  }
+};
+
+export const updateProfileImageAction = async (
+  prevState: { message: string },
+  formData: FormData,
+): Promise<{ message: string }> => {
+  const user = await getAuthUser();
+  try {
+    const image = formData.get("image") as File;
+    const validatedField = validateWithZodSchema(imageSchema, { image });
+    // console.log(validatedField);
+    const fullPath = await uploadImage(validatedField.image);
+
+    await db.profile.update({
+      where: {
+        clerkId: user.id,
+      },
+      data: {
+        profileImage: fullPath,
+      },
+    });
+    revalidatePath("/profile");
+    return { message: "Profile image updated successfully" };
+  } catch (error) {
+    return renderError(error);
+  }
+};
+
+export const createPropertyAction = async (): Promise<{
+  message: string;
+}> => {
+  try {
+    return { message: "Property was created updated successfully" };
+  } catch (error) {
+    return renderError(error);
+  }
 };
