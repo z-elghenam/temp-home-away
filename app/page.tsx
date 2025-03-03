@@ -3,12 +3,12 @@ import CategoriesList from "@/components/home/CategoriesList";
 import PropertiesContainer from "@/components/home/PropertiesContainer";
 import { Suspense } from "react";
 
-async function HomePage({
+function HomePage({
   searchParams,
 }: {
   searchParams: { category?: string; search?: string };
 }) {
-  const { category, search } = await searchParams;
+  const { category, search } =  searchParams;
 
   return (
     <section>
