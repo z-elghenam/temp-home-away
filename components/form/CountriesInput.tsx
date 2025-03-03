@@ -10,7 +10,6 @@ import {
 
 const name = 'country';
 function CountriesInput({ defaultValue }: { defaultValue?: string }) {
-  console.log(formattedCountries)
 
   return (
     <div className='mb-2'>
