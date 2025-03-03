@@ -1,6 +1,5 @@
-import type { NextConfig } from "next";
 
-const nextConfig: NextConfig = {
+const nextConfig = {
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "img.clerk.com" },
@@ -13,7 +12,7 @@ const nextConfig: NextConfig = {
   },
     experimental: {
     serverActions: {
-      bodySizeLimit: "5mb", // Increase the limit to 10 MB (or any size you need)
+      bodySizeLimit: "5mb", 
     },
   },
 };

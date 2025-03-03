@@ -35,7 +35,7 @@ function CategoriesList({
         </div>
         <ScrollBar orientation='horizontal' />
       </ScrollArea>
-    </section>
+    </section>  
   );
 }
 export default CategoriesList;
