@@ -5,7 +5,6 @@ import {
   propertySchema,
   validateWithZodSchema,
 } from "./schemas";
-import { ZodError } from "zod";
 import db from "./db";
 import { clerkClient, currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
@@ -15,9 +14,9 @@ import { uploadImage } from "./supabase";
 const getAuthUser = async () => {
   const user = await currentUser();
 
-  if (!user) throw new Error("You must be logged in to access this route")
+  if (!user) throw new Error("You must be logged in to access this route");
 
-  if (!user.privateMetadata.hasProfile) redirect("/profile/create");
+  if (!user?.privateMetadata.hasProfile) redirect("/profile/create");
   return user;
 };
 
@@ -60,14 +59,10 @@ export const createProfileAction = async (
       },
     });
   } catch (err) {
-    if (err instanceof ZodError) {
-      return { message: err.errors.map((e) => e.message).join(", ") };
-    }
-
-    return {
-      message:
-        err instanceof Error ? err.message : "An unexpected error occurred",
-    };
+    renderError(err);
+    // if (err instanceof ZodError) {
+    //   return { message: err.errors.map((e) => e.message).join(", ") };
+    // }
   }
 
   redirect("/");
@@ -75,8 +70,7 @@ export const createProfileAction = async (
 
 export const fetchProfileImage = async () => {
   const user = await currentUser();
-  if(!user) return null
-
+  if (!user) return null;
 
   const profile = await db.profile.findUnique({
     where: {
@@ -92,7 +86,6 @@ export const fetchProfileImage = async () => {
 
 export const fetchProfile = async () => {
   const user = await getAuthUser();
-
 
   const profile = await db.profile.findUnique({
     where: {
@@ -165,19 +158,19 @@ export const createPropertyAction = async (
 
     const fullPath = await uploadImage(validatedFile.image);
 
-    await db.property.create({
+    const property =  await db.property.create({
       data: {
         ...validatedFields,
         image: fullPath,
         profileId: user.id,
       },
     });
+    redirect(`/property/${property.id}`);
     return { message: "Property was created updated successfully" };
   } catch (error) {
     console.error("Error creating property:", error);
     return renderError(error);
   }
-  redirect("/");
 };
 
 export const fetchProperties = async ({
@@ -248,7 +241,7 @@ export const toggleFavoriteAction = async (prevState: {
       });
     }
     revalidatePath(pathname);
-    return { message: favoriteId ? 'Removed from Faves' : 'Added to Faves' };
+    return { message: favoriteId ? "Removed from Faves" : "Added to Faves" };
   } catch (error) {
     return renderError(error);
   }
