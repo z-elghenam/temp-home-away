@@ -5,7 +5,6 @@ import BreadCrumbs from "@/components/properties/BreadCrumbs";
 import Description from "@/components/properties/Description";
 import ImageContainer from "@/components/properties/ImageContainer";
 import PropertyDetails from "@/components/properties/PropertyDetails";
-// import PropertyMapClient from "@/components/properties/PropertyMapClient";
 import ShareButton from "@/components/properties/ShareButton";
 import UserInfo from "@/components/properties/UserInfo";
 import BookingCalendar from "@/components/properties/booking/BookingCalendar";
@@ -23,8 +22,6 @@ const DynamicMap = dynamic(
   }
 );
 
-
-
 async function PropertyDetailsPage({ params }: { params: { id: string } }) {
   const property = await fetchPropertyDetails(params.id);
   if (!property) redirect("/");
@@ -32,6 +29,7 @@ async function PropertyDetailsPage({ params }: { params: { id: string } }) {
   const details = { baths, bedrooms, beds, guests };
   const firstName = property.profile.firstName;
   const profileImage = property.profile.profileImage;
+  
   return (
     <section>
       <BreadCrumbs name={property.name} />
@@ -53,9 +51,7 @@ async function PropertyDetailsPage({ params }: { params: { id: string } }) {
           <UserInfo profile={{ firstName, profileImage }} />
           <Separator className="mt-4" />
           <Description description={property.description} />
-          <Amenities amenities={property.amenities} />
-          
-          {/*<PropertyMapClient countryCode={property.country} />*/}
+          <Amenities amenities={property.amenities} />          
           <DynamicMap countryCode={property.country} />
 
         </div>
