@@ -9,12 +9,13 @@ import CountriesInput from "@/components/form/CountriesInput";
 import ImageInput from "@/components/form/ImageInput";
 import CounterInput from "@/components/form/CounterInput";
 import AmenitiesInput from "@/components/form/AmenitiesInput";
+import Map from "@/components/form/Map";
 
 function CreateProperty() {
   return (
     <section>
       <h1 className="text-2xl font-semibold mb-8 capitalize">
-        create property
+        create new property
       </h1>
       <div className="border p-8 rounded-md">
         <h3 className="text-lg mb-4 font-medium">General Info</h3>
@@ -43,6 +44,13 @@ function CreateProperty() {
             <CountriesInput />
             <ImageInput />
           </div>
+          <Map/>
+          <FormInput
+              name="city"
+              type="text"
+              label="city"
+              defaultValue=""
+            />
           <h3 className="text-lg mt-8 mb-4 font-medium">
             Accommodation Details
           </h3>

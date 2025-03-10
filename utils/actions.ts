@@ -1,5 +1,6 @@
 "use server";
 import {
+  createReviewSchema,
   imageSchema,
   profileSchema,
   propertySchema,
@@ -52,7 +53,6 @@ export const createProfileAction = async (
     });
 
     const client = await clerkClient();
-
     await client.users.updateUserMetadata(user.id, {
       privateMetadata: {
         hasProfile: true,
@@ -60,9 +60,6 @@ export const createProfileAction = async (
     });
   } catch (err) {
     renderError(err);
-    // if (err instanceof ZodError) {
-    //   return { message: err.errors.map((e) => e.message).join(", ") };
-    // }
   }
 
   redirect("/");
@@ -148,7 +145,7 @@ export const updateProfileImageAction = async (
 export const createPropertyAction = async (
   prevState: { message: string },
   formData: FormData,
-): Promise<{ message: string }> => {
+): Promise<{ message: string; redirectTo?: string }> => {
   const user = await getAuthUser();
   try {
     const rawData = Object.fromEntries(formData);
@@ -158,17 +155,21 @@ export const createPropertyAction = async (
 
     const fullPath = await uploadImage(validatedFile.image);
 
-    const property =  await db.property.create({
+    const property = await db.property.create({
       data: {
         ...validatedFields,
         image: fullPath,
         profileId: user.id,
       },
     });
-    redirect(`/property/${property.id}`);
-    return { message: "Property was created updated successfully" };
+
+    // redirect(`/properties/${property.id}`);
+    // return { message: "Property was created updated successfully" };
+    return {
+      message: "Property was created successfully!",
+      redirectTo: `/properties/${property.id}`,
+    };
   } catch (error) {
-    console.error("Error creating property:", error);
     return renderError(error);
   }
 };
@@ -202,14 +203,15 @@ export const fetchProperties = async ({
 
 export const fetchFavoriteId = async ({
   propertyId,
+  userId,
 }: {
   propertyId: string;
+  userId: string;
 }) => {
-  const user = await getAuthUser();
   const favorite = await db.favorite.findFirst({
     where: {
       propertyId,
-      profileId: user.id,
+      profileId: userId,
     },
     select: {
       id: true,
@@ -279,3 +281,119 @@ export const fetchPropertyDetails = async (id: string) => {
     },
   });
 };
+
+export const createReviewAction = async (
+  prevState: { message: string },
+  formData: FormData,
+): Promise<{ message: string }> => {
+  const user = await getAuthUser();
+
+  try {
+    const rawData = Object.fromEntries(formData);
+    const validatedFields = validateWithZodSchema(createReviewSchema, rawData);
+    await db.review.create({
+      data: {
+        ...validatedFields,
+        profileId: user.id,
+      },
+    });
+    revalidatePath(`/properties/${validatedFields.propertyId}`);
+    return { message: "Review submitted successfully" };
+  } catch (err) {
+    return renderError(err);
+  }
+};
+
+export const fetchPropertyReviews = async (propertyId: string) => {
+  const reviews = await db.review.findMany({
+    where: {
+      propertyId,
+    },
+    select: {
+      id: true,
+      rating: true,
+      comment: true,
+      profile: {
+        select: {
+          firstName: true,
+          profileImage: true,
+        },
+      },
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+  });
+  return reviews;
+};
+
+export const fetchPropertyReviewsByUser = async () => {
+  const user = await getAuthUser();
+  const reviews = await db.review.findMany({
+    where: {
+      profileId: user.id,
+    },
+    select: {
+      id: true,
+      rating: true,
+      comment: true,
+      property: {
+        select: {
+          name: true,
+          image: true,
+        },
+      },
+    },
+  });
+  return reviews;
+};
+
+export const deleteReviewAction = async (prevState: { reviewId: string }) => {
+  const { reviewId } = prevState;
+  const user = await getAuthUser();
+  try {
+    await db.review.delete({
+      where: {
+        id: reviewId,
+        profileId: user.id,
+      },
+    });
+    revalidatePath("/reviews");
+    return { message: "Review Deleted" };
+  } catch (err) {
+    return renderError(err);
+  }
+};
+
+export const findExistingReview = async (
+  userId: string,
+  propertyId: string,
+) => {
+  return await db.review.findFirst({
+    where: {
+      profileId: userId,
+      propertyId: propertyId,
+    },
+  });
+};
+
+export async function fetchPropertyRating(propertyId: string) {
+  const result = await db.review.groupBy({
+    by: ["propertyId"],
+    _avg: {
+      rating: true,
+    },
+    _count: {
+      rating: true,
+    },
+    where: {
+      propertyId,
+    },
+  });
+
+  // empty array if no reviews
+  return {
+    rating: result[0]?._avg.rating?.toFixed(1) ?? 0,
+    count: result[0]?._count.rating ?? 0,
+  };
+}

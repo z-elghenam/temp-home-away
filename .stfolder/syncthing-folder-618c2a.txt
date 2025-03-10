@@ -1,0 +1,5 @@
+# This directory is a Syncthing folder marker.
+# Do not delete.
+
+folderID: home-way
+created: 2025-03-06T19:27:47Z
